@@ -1,1 +1,1 @@
-# DevSecOps-iTi-Final-Project-CI-CD-Pipeline-on-EKS-with-Terraform-Jenkins-ArgoCD
+# DevOps-iTi-Final-Project
