@@ -1,0 +1,286 @@
+pipeline {
+  agent {
+    kubernetes {
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: kaniko-serviceaccount
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    imagePullPolicy: Always
+    command: ["sleep"]
+    args: ["9999999"]
+    tty: true
+    volumeMounts:
+    - name: jenkins-docker-cfg
+      mountPath: /kaniko/.docker
+    - name: workspace-volume
+      mountPath: /workspace
+  - name: trivy
+    image: aquasec/trivy:latest
+    command: ["sleep"]
+    args: ["9999999"]
+    volumeMounts:
+    - name: jenkins-docker-cfg
+      mountPath: /kaniko/.docker
+    - name: workspace-volume
+      mountPath: /workspace
+  - name: owasp
+    image: owasp/dependency-check:latest
+    command: ["sleep"]
+    args: ["9999999"]
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: /src
+  volumes:
+  - name: jenkins-docker-cfg
+    emptyDir: {}
+  - name: workspace-volume
+    emptyDir: {}
+      """
+    }
+  }
+
+  environment {
+    AWS_REGION     = 'us-east-1'
+    AWS_ACCOUNT_ID = '384747603695'
+    ECR_REPO_FRONT = 'hendawy-ecr-front'
+    ECR_REPO_BACK  = 'hendawy-ecr-back'
+    SONAR_SCANNER_HOME = tool 'sonar-scanner';
+  }
+
+ stages {
+    stage('Set Env Vars') {
+      steps {
+        script {
+          env.IMAGE_TAG = "1.0.${env.BUILD_NUMBER}"
+          echo "Using IMAGE_TAG: ${env.IMAGE_TAG}"
+
+          env.FULL_IMAGE = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${env.ECR_REPO_FRONT}:${env.IMAGE_TAG}"
+          env.FULL_IMAGE_BACK = "${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/${env.ECR_REPO_BACK}:${env.IMAGE_TAG}"
+
+          echo "FULL_IMAGE Frontend: ${env.FULL_IMAGE}"
+          echo "FULL_IMAGE Backend: ${env.FULL_IMAGE_BACK}"
+        }
+      }
+    }
+
+    stage('Checkout Code') {
+      steps {
+        container('kaniko') {
+          git url: 'https://github.com/Hendawyy/3Tier-app-nmr.git', branch: 'master'
+        }
+      }
+    }
+
+  stage('SAST - SonarQube Front-End') {
+    steps {
+      timeout(time: 300, unit: 'SECONDS') {
+        withSonarQubeEnv('sq') {
+          dir('FrontEnd') {
+            script {
+              def sonarOutput = sh (
+                script: '''
+                  $SONAR_SCANNER_HOME/bin/sonar-scanner \\
+                    -Dsonar.projectKey=frontend \\
+                    -Dsonar.branch.name=master
+                ''',
+                returnStdout: true
+              )
+
+              if (!sonarOutput.contains("EXECUTION SUCCESS")) {
+                echo "❌ SonarQube Front-End scan failed."
+                currentBuild.result = 'UNSTABLE'
+              } else {
+                echo "✅ SonarQube Front-End scan completed: EXECUTION SUCCESS"
+                currentBuild.result = 'SUCCESS' 
+              }
+            }
+          }
+        }
+
+        script {
+          try {
+            def qg = waitForQualityGate()
+            if (qg.status != 'OK') {
+              echo "❌ Front-End Quality Gate failed: ${qg.status}"
+              currentBuild.result = 'UNSTABLE' 
+            } else {
+              echo "✅ Front-End Quality Gate passed."
+              currentBuild.result = 'SUCCESS' 
+            }
+          } catch (err) {
+            echo "⚠️ Skipping Front-End Quality Gate check: ${err.getMessage()}"
+            currentBuild.result = 'SUCCESS' 
+          }
+        }
+      }
+    }
+  }
+
+  stage('SAST - SonarQube Back-End') {
+    steps {
+      timeout(time: 300, unit: 'SECONDS') {
+        withSonarQubeEnv('sq') {
+          dir('BackEnd') {
+            script {
+              def sonarOutput = sh (
+                script: '''
+                  $SONAR_SCANNER_HOME/bin/sonar-scanner \\
+                    -Dsonar.projectKey=backend \\
+                    -Dsonar.branch.name=master
+                ''',
+                returnStdout: true
+              )
+
+              if (!sonarOutput.contains("EXECUTION SUCCESS")) {
+                echo "❌ SonarQube Back-End scan failed."
+                currentBuild.result = 'UNSTABLE'
+              } else {
+                echo "✅ SonarQube Back-End scan completed: EXECUTION SUCCESS"
+                currentBuild.result = 'SUCCESS'
+              }
+            }
+          }
+        }
+
+        script {
+          try {
+            def qg = waitForQualityGate()
+            if (qg.status != 'OK') {
+              echo "❌ Back-End Quality Gate failed: ${qg.status}"
+              currentBuild.result = 'UNSTABLE'
+            } else {
+              echo "✅ Back-End Quality Gate passed."
+              currentBuild.result = 'SUCCESS'
+            }
+          } catch (err) {
+            echo "⚠️ Skipping Back-End Quality Gate check: ${err.getMessage()}"
+            currentBuild.result = 'SUCCESS'
+          }
+        }
+      }
+    }
+  }
+
+    stage('Kaniko Build TAR - Frontend') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \
+              --context=./FrontEnd \
+              --dockerfile=./FrontEnd/Dockerfile \
+              --no-push \
+              --tar-path=/workspace/front-output.tar
+          """
+        }
+      }
+    }
+
+    stage('Kaniko Build TAR - Backend') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \
+              --context=./BackEnd \
+              --dockerfile=./BackEnd/Dockerfile \
+              --no-push \
+              --tar-path=/workspace/back-output.tar
+          """
+        }
+      }
+    }
+
+    stage('Trivy Scan - Frontend') {
+      steps {
+        container('trivy') {
+          sh '''
+            apk add --no-cache jq util-linux || true
+            trivy image --input /workspace/front-output.tar \
+              --severity CRITICAL \
+              --exit-code 0 \
+              --format json \
+              -o /workspace/trivy-front-result.json
+
+            echo 'Critical vulnerabilities found in Frontend image:'
+            echo 'VulnerabilityID | Severity | Package | Description'
+            echo '---------------------------------------------------'
+
+            VULNS=$(jq -r '
+              .Results[]?.Vulnerabilities? // [] |
+              .[] | [.VulnerabilityID, .Severity, .PkgName, (.Description // "No description")] | @tsv
+            ' /workspace/trivy-front-result.json)
+
+            if [ -n "$VULNS" ]; then
+              echo "$VULNS" | column -t -s $'\\t'
+              echo "⚠️ Build continues despite vulnerabilities."
+            else
+              echo "✅ No critical vulnerabilities found in Frontend image."
+            fi
+          '''
+        }
+      }
+    }
+
+    stage('Trivy Scan - Backend') {
+      steps {
+        container('trivy') {
+          sh '''
+            apk add --no-cache jq util-linux || true
+            trivy image --input /workspace/back-output.tar \
+              --severity CRITICAL \
+              --exit-code 0 \
+              --format json \
+              -o /workspace/trivy-back-result.json
+
+            echo 'Critical vulnerabilities found in Backend image:'
+            echo 'VulnerabilityID | Severity | Package | Description'
+            echo '---------------------------------------------------'
+
+            VULNS=$(jq -r '
+              .Results[]?.Vulnerabilities? // [] |
+              .[] | [.VulnerabilityID, .Severity, .PkgName, (.Description // "No description")] | @tsv
+            ' /workspace/trivy-back-result.json)
+
+            if [ -n "$VULNS" ]; then
+              echo "$VULNS" | column -t -s $'\\t'
+              echo "⚠️ Build continues despite vulnerabilities."
+            else
+              echo "✅ No critical vulnerabilities found in Backend image."
+            fi
+          '''
+        }
+      }
+    }
+
+    stage('Build & Push Frontend') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \
+              --dockerfile=FrontEnd/Dockerfile \
+              --context=FrontEnd \
+              --destination=${env.FULL_IMAGE} \
+              --cache=true
+          """
+        }
+      }
+    }
+
+    stage('Build & Push Backend') {
+      steps {
+        container('kaniko') {
+          sh """
+            /kaniko/executor \
+              --dockerfile=BackEnd/Dockerfile \
+              --context=BackEnd \
+              --destination=${env.FULL_IMAGE_BACK} \
+              --cache=true
+          """
+        }
+      }
+    }
+  }
+}

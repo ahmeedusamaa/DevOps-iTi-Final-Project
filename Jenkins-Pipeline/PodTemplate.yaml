@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: kaniko-serviceaccount
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    imagePullPolicy: Always
+    command: ["sleep"]
+    args: ["9999999"]
+    tty: true
+    volumeMounts:
+    - name: jenkins-docker-cfg
+      mountPath: /kaniko/.docker
+    - name: workspace-volume
+      mountPath: /workspace
+  - name: trivy
+    image: aquasec/trivy:latest
+    command: ["sleep"]
+    args: ["9999999"]
+    volumeMounts:
+    - name: jenkins-docker-cfg
+      mountPath: /kaniko/.docker
+    - name: workspace-volume
+      mountPath: /workspace
+  - name: owasp
+    image: owasp/dependency-check:latest
+    command: ["sleep"]
+    args: ["9999999"]
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: /src
+  volumes:
+  - name: jenkins-docker-cfg
+    emptyDir: {}
+  - name: workspace-volume
+    emptyDir: {}
