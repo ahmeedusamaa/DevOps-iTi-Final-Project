@@ -1,0 +1,67 @@
+persistence:
+  enabled: true
+  existingClaim: jenkins-ebs-pvc
+
+controller:
+  healthProbes: false
+  serviceType: ClusterIP
+
+  admin:
+    existingSecret: jenkins-secret
+    userKey: admin-user
+    passwordKey: admin-password
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: "letsencrypt"
+    hostName: ${jenkins_host}
+    path: /
+    tls:
+      - hosts:
+          - ${jenkins_host}
+        secretName: jenkins-tls
+
+
+  installPlugins:
+    - sonar
+    - dependency-check-jenkins-plugin
+    - amazon-ecr
+    - aws-secrets-manager-credentials-provider
+    - git
+    - github
+    - github-api
+    - github-branch-source
+    - docker-workflow
+    - kubernetes
+    - configuration-as-code
+    - workflow-aggregator
+    - credentials-binding
+    - plain-credentials
+    - ssh-credentials
+    - matrix-auth
+    - pipeline-stage-view
+    - pipeline-github-lib
+    - antisamy-markup-formatter
+    - mailer
+    - ws-cleanup
+    - workflow-job
+    - workflow-cps
+    - workflow-basic-steps
+    - workflow-durable-task-step
+    - dark-theme
+    - generic-webhook-trigger
+    - dependency-track
+    - adoptopenjdk
+    - pipeline-utility-steps
+
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
