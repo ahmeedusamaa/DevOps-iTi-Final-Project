@@ -1,0 +1,30 @@
+edition: developer
+
+monitoringPasscode: yourPasscode
+
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt"
+  hosts:
+    - name: ${domain_name}
+  tls:
+    - secretName: sonarqube-tls
+      hosts:
+        - ${domain_name}
+
+persistence:
+  enabled: true
+  existingClaim: sonar-pvc
+  uid: 1000
+  guid: 0
+
+postgresql:
+  postgresqlUsername: sonarUser
+  postgresqlPassword: sonarPass
+  postgresqlDatabase: sonarDB
+  persistence:
+    enabled: true
+    existingClaim: sonar-postgresql-pvc
