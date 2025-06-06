@@ -1,0 +1,55 @@
+grafana:
+  existingSecret: grafana-secret
+  userKey: admin-user
+  passwordKey: admin-password
+  defaultDashboardsEnabled: true
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: "letsencrypt"
+    hosts:
+      - ${grafana_host}
+    path: /
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - ${grafana_host}
+
+  persistence:
+    enabled: true
+    existingClaim: grafana-ebs-pvc
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi  
+
+prometheus:
+  prometheusSpec:
+    storageSpec: null
+    additionalVolumes:
+        - name: prometheus-storage
+          persistentVolumeClaim:
+            claimName: prometheus-ebs-pvc
+    additionalVolumeMounts:
+      - name: prometheus-storage
+        mountPath: /prometheus
+    scrapeInterval: 15s
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: "letsencrypt"
+    hosts:
+      - ${prometheus_host}
+    paths:
+      - /
+    tls:
+      - secretName: prometheus-tls
+        hosts:
+          - ${prometheus_host}
