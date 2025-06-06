@@ -1,0 +1,23 @@
+serviceAccount:
+  create: true
+  name: imageupdater-sa
+  annotations:
+    eks.amazonaws.com/role-arn: ${irsa_role_arn}
+
+authScripts: 
+  enabled: true
+  scripts:
+    auth.sh: |
+      #!/bin/sh
+      HOME=/tmp aws ecr --region ${region} get-authorization-token --output text --query 'authorizationData[].authorizationToken' | base64 -d
+
+config:
+  registries:
+  - name: ECR
+    api_url: https://${AccountID}.dkr.ecr.${region}.amazonaws.com
+    prefix: ${AccountID}.dkr.ecr.${region}.amazonaws.com
+    ping: yes
+    insecure: no
+    default: true
+    credentials: ext:/scripts/auth.sh
+    credsexpire: 10h
