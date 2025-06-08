@@ -1,0 +1,15 @@
+locals {
+  region          = "us-east-1"
+  zone1           = "us-east-1a"
+  zone2           = "us-east-1b"
+  zone3           = "us-east-1c"
+  eks_name        = "Hendawy-EKS"
+  eks_version     = "1.33"
+  prefix          = "DevOps"
+  jenkins_host    = "jenkins.${var.domain_name}"
+  argocd_host     = "argocd.${var.domain_name}"
+  prometheus_host = "prometheus.${var.domain_name}"
+  grafana_host    = "grafana.${var.domain_name}"
+  sonarqube_host  = "sonarqube.${var.domain_name}"
+  app_host        = "${var.app_name}.${var.domain_name}"
+}
