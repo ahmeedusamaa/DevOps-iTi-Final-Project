@@ -1,5 +1,5 @@
 module "Network" {
-  source                = "./modules/Network"
+  source                = "./Modules/Network"
   prefix                = local.prefix
   zone1                 = local.zone1
   zone2                 = local.zone2
@@ -11,7 +11,7 @@ module "Network" {
 }
 
 module "IAM" {
-  source            = "./modules/IAM"
+  source            = "./Modules/IAM"
   prefix            = local.prefix
   eks_name          = local.eks_name
   oidc_issuer       = module.EKS.oidc_provider_url
@@ -19,11 +19,11 @@ module "IAM" {
 }
 
 module "Keys" {
-  source = "./modules/Keys"
+  source = "./Modules/Keys"
 }
 
 module "SecGrp" {
-  source         = "./modules/SecGrp"
+  source         = "./Modules/SecGrp"
   VPC_ID         = module.Network.vpc_id
   VPC_CIDR_BLOCK = module.Network.VPC_CIDR
   eks            = module.EKS.eks
@@ -31,7 +31,7 @@ module "SecGrp" {
 }
 
 module "EKS" {
-  source                           = "./modules/EKS"
+  source                           = "./Modules/EKS"
   prefix                           = local.prefix
   eks_name                         = local.eks_name
   eks_version                      = local.eks_version
@@ -46,7 +46,7 @@ module "EKS" {
 }
 
 module "NodeGroup" {
-  source                           = "./modules/NodeGroup"
+  source                           = "./Modules/NodeGroup"
   prefix                           = local.prefix
   eks_name                         = local.eks_name
   eks_version                      = local.eks_version
@@ -68,7 +68,7 @@ module "NodeGroup" {
 }
 
 module "EBS" {
-  source                = "./modules/EBS"
+  source                = "./Modules/EBS"
   ebs_csi_irsa_role_arn = module.IAM.ebs_csi_irsa_role_arn
   depends_on = [module.EKS, module.NodeGroup,
     module.IAM,
@@ -76,20 +76,20 @@ module "EBS" {
 }
 
 module "ECR" {
-  source                       = "./modules/ECR"
+  source                       = "./Modules/ECR"
   FrontEnd_ECR_repository_name = var.FrontEnd_ECR_repository_name
   BackEnd_ECR_repository_name  = var.BackEnd_ECR_repository_name
 }
 
 module "Bastion" {
-  source        = "./modules/Bastion"
+  source        = "./Modules/Bastion"
   key_name      = module.Keys.Key_Name
   bastion_sg_id = module.SecGrp.bastion_sg_id
   subnet_id     = module.Network.public_subnet_ids[0]
 }
 
 module "OIDC" {
-  source            = "./modules/OIDC"
+  source            = "./Modules/OIDC"
   eks_name          = module.EKS.cluster_name
   oidc_provider_url = module.EKS.oidc_provider_url
   prefix            = local.prefix
@@ -97,7 +97,7 @@ module "OIDC" {
 }
 
 module "SecretsManager" {
-  source = "./modules/SecretsManager"
+  source = "./Modules/SecretsManager"
 
   port = var.port
 
@@ -120,7 +120,7 @@ module "SecretsManager" {
 
 
 module "Route53" {
-  source          = "./modules/Route53"
+  source          = "./Modules/Route53"
   nginx_lb_dns    = module.IngressController.nginx_lb_dns
   jenkins_host    = local.jenkins_host
   argocd_host     = local.argocd_host
@@ -133,7 +133,7 @@ module "Route53" {
 }
 
 module "Argo" {
-  source                       = "./modules/Argo"
+  source                       = "./Modules/Argo"
   region                       = local.region
   Account_ID                   = var.Account_ID
   ingress_hosts                = module.Route53.ingress_hosts
@@ -152,7 +152,7 @@ module "Argo" {
 }
 
 module "CertManager" {
-  source = "./modules/CertManager"
+  source = "./Modules/CertManager"
   email  = var.email
   depends_on = [module.EKS,
     module.NodeGroup,
@@ -161,7 +161,7 @@ module "CertManager" {
 }
 
 module "ESO" {
-  source  = "./modules/ESO"
+  source  = "./Modules/ESO"
   region  = local.region
   eso_arn = module.IAM.eso_irsa_role_arn
   depends_on = [module.EKS,
@@ -171,7 +171,7 @@ module "ESO" {
 }
 
 module "IngressController" {
-  source              = "./modules/IngressController"
+  source              = "./Modules/IngressController"
   eks_core_dns        = module.NodeGroup.eks_core_dns
   nginx_ingress_sg_id = module.SecGrp.nginx_ingress_sg_id
   depends_on = [module.EKS,
@@ -181,7 +181,7 @@ module "IngressController" {
 }
 
 module "Jenkins" {
-  source                = "./modules/Jenkins"
+  source                = "./Modules/Jenkins"
   jenkins_irsa_role_arn = module.IAM.jenkins_irsa_role_arn
   ingress_hosts         = module.Route53.ingress_hosts
   kaniko_ecr_policy_arn = module.IAM.kaniko_ecr_policy_arn
@@ -198,7 +198,7 @@ module "Jenkins" {
 }
 
 module "Monitoring" {
-  source        = "./modules/Monitoring"
+  source        = "./Modules/Monitoring"
   ingress_hosts = module.Route53.ingress_hosts
   depends_on = [module.EKS,
     module.NodeGroup,
@@ -210,7 +210,7 @@ module "Monitoring" {
 }
 
 module "SonarQube" {
-  source        = "./modules/SonarQube"
+  source        = "./Modules/SonarQube"
   ingress_hosts = module.Route53.ingress_hosts
   depends_on = [module.EKS,
     module.NodeGroup,
