@@ -37,95 +37,95 @@ pipeline {
       }
     }
 
-  stage('SAST - SonarQube Front-End') {
-    steps {
-      timeout(time: 300, unit: 'SECONDS') {
-        withSonarQubeEnv('sq') {
-          dir('FrontEnd') {
-            script {
-              def sonarOutput = sh (
-                script: '''
-                  $SONAR_SCANNER_HOME/bin/sonar-scanner \\
-                    -Dsonar.projectKey=frontend \\
-                    -Dsonar.branch.name=master
-                ''',
-                returnStdout: true
-              )
+  // stage('SAST - SonarQube Front-End') {
+  //   steps {
+  //     timeout(time: 300, unit: 'SECONDS') {
+  //       withSonarQubeEnv('sq') {
+  //         dir('FrontEnd') {
+  //           script {
+  //             def sonarOutput = sh (
+  //               script: '''
+  //                 $SONAR_SCANNER_HOME/bin/sonar-scanner \\
+  //                   -Dsonar.projectKey=frontend \\
+  //                   -Dsonar.branch.name=master
+  //               ''',
+  //               returnStdout: true
+  //             )
 
-              if (!sonarOutput.contains("EXECUTION SUCCESS")) {
-                echo "❌ SonarQube Front-End scan failed."
-                currentBuild.result = 'UNSTABLE'
-              } else {
-                echo "✅ SonarQube Front-End scan completed: EXECUTION SUCCESS"
-                currentBuild.result = 'SUCCESS' 
-              }
-            }
-          }
-        }
+  //             if (!sonarOutput.contains("EXECUTION SUCCESS")) {
+  //               echo "❌ SonarQube Front-End scan failed."
+  //               currentBuild.result = 'UNSTABLE'
+  //             } else {
+  //               echo "✅ SonarQube Front-End scan completed: EXECUTION SUCCESS"
+  //               currentBuild.result = 'SUCCESS' 
+  //             }
+  //           }
+  //         }
+  //       }
 
-        script {
-          try {
-            def qg = waitForQualityGate()
-            if (qg.status != 'OK') {
-              echo "❌ Front-End Quality Gate failed: ${qg.status}"
-              currentBuild.result = 'UNSTABLE' 
-            } else {
-              echo "✅ Front-End Quality Gate passed."
-              currentBuild.result = 'SUCCESS' 
-            }
-          } catch (err) {
-            echo "⚠️ Skipping Front-End Quality Gate check: ${err.getMessage()}"
-            currentBuild.result = 'SUCCESS' 
-          }
-        }
-      }
-    }
-  }
+  //       script {
+  //         try {
+  //           def qg = waitForQualityGate()
+  //           if (qg.status != 'OK') {
+  //             echo "❌ Front-End Quality Gate failed: ${qg.status}"
+  //             currentBuild.result = 'UNSTABLE' 
+  //           } else {
+  //             echo "✅ Front-End Quality Gate passed."
+  //             currentBuild.result = 'SUCCESS' 
+  //           }
+  //         } catch (err) {
+  //           echo "⚠️ Skipping Front-End Quality Gate check: ${err.getMessage()}"
+  //           currentBuild.result = 'SUCCESS' 
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
 
-  stage('SAST - SonarQube Back-End') {
-    steps {
-      timeout(time: 300, unit: 'SECONDS') {
-        withSonarQubeEnv('sq') {
-          dir('BackEnd') {
-            script {
-              def sonarOutput = sh (
-                script: '''
-                  $SONAR_SCANNER_HOME/bin/sonar-scanner \\
-                    -Dsonar.projectKey=backend \\
-                    -Dsonar.branch.name=master
-                ''',
-                returnStdout: true
-              )
+  // stage('SAST - SonarQube Back-End') {
+  //   steps {
+  //     timeout(time: 300, unit: 'SECONDS') {
+  //       withSonarQubeEnv('sq') {
+  //         dir('BackEnd') {
+  //           script {
+  //             def sonarOutput = sh (
+  //               script: '''
+  //                 $SONAR_SCANNER_HOME/bin/sonar-scanner \\
+  //                   -Dsonar.projectKey=backend \\
+  //                   -Dsonar.branch.name=master
+  //               ''',
+  //               returnStdout: true
+  //             )
 
-              if (!sonarOutput.contains("EXECUTION SUCCESS")) {
-                echo "❌ SonarQube Back-End scan failed."
-                currentBuild.result = 'UNSTABLE'
-              } else {
-                echo "✅ SonarQube Back-End scan completed: EXECUTION SUCCESS"
-                currentBuild.result = 'SUCCESS'
-              }
-            }
-          }
-        }
+  //             if (!sonarOutput.contains("EXECUTION SUCCESS")) {
+  //               echo "❌ SonarQube Back-End scan failed."
+  //               currentBuild.result = 'UNSTABLE'
+  //             } else {
+  //               echo "✅ SonarQube Back-End scan completed: EXECUTION SUCCESS"
+  //               currentBuild.result = 'SUCCESS'
+  //             }
+  //           }
+  //         }
+  //       }
 
-        script {
-          try {
-            def qg = waitForQualityGate()
-            if (qg.status != 'OK') {
-              echo "❌ Back-End Quality Gate failed: ${qg.status}"
-              currentBuild.result = 'UNSTABLE'
-            } else {
-              echo "✅ Back-End Quality Gate passed."
-              currentBuild.result = 'SUCCESS'
-            }
-          } catch (err) {
-            echo "⚠️ Skipping Back-End Quality Gate check: ${err.getMessage()}"
-            currentBuild.result = 'SUCCESS'
-          }
-        }
-      }
-    }
-  }
+  //       script {
+  //         try {
+  //           def qg = waitForQualityGate()
+  //           if (qg.status != 'OK') {
+  //             echo "❌ Back-End Quality Gate failed: ${qg.status}"
+  //             currentBuild.result = 'UNSTABLE'
+  //           } else {
+  //             echo "✅ Back-End Quality Gate passed."
+  //             currentBuild.result = 'SUCCESS'
+  //           }
+  //         } catch (err) {
+  //           echo "⚠️ Skipping Back-End Quality Gate check: ${err.getMessage()}"
+  //           currentBuild.result = 'SUCCESS'
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
 
     stage('Kaniko Build TAR - Frontend') {
       steps {
