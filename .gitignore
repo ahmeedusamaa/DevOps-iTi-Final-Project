@@ -39,3 +39,4 @@ Terraform/.terraform.lock.hcl
 Argo/secrets.yaml
 Terraform/Modules/Argo/ArgoApp/secret.yaml
 Terraform/*.tfvars
+Terraform/Modules/Keys/eks-self-managed-key.pem
