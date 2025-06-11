@@ -1,9 +1,9 @@
 # Local .terraform directories
-.terraform/
+Terraform/.terraform/
 
 # .tfstate files
-*.tfstate
-*.tfstate.*
+Terraform/*.tfstate
+Terraform/*.tfstate.*
 
 # Crash log files
 crash.log
@@ -13,18 +13,18 @@ crash.*.log
 # password, private keys, and other secrets. These should not be part of version 
 # control as they are data points which are potentially sensitive and subject 
 # to change depending on the environment.
-*.tfvars
-*.tfvars.json
+Terraform/*.tfvars
+Terraform/*.tfvars.json
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
+Terraform/override.tf
+Terraform/override.tf.json
+Terraform/*_override.tf
+Terraform/*_override.tf.json
 
 # Ignore transient lock info files created by terraform apply
-.terraform.tfstate.lock.info
+Terraform/.terraform.tfstate.lock.info
 
 # Include override files you do wish to add to version control using negated pattern
 # !example_override.tf
@@ -33,9 +33,10 @@ override.tf.json
 # example: *tfplan*
 
 # Ignore CLI configuration files
-.terraformrc
-terraform.rc
-.terraform.lock.hcl
+Terraform/.terraformrc
+Terraform/terraform.rc
+Terraform/.terraform.lock.hcl
 Argo/secrets.yaml
 Terraform/Modules/Argo/ArgoApp/secret.yaml
 Terraform/*.tfvars
+Terraform/Modules/Keys/eks-self-managed-key.pem
